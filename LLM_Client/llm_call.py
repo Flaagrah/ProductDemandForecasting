@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
-import openai
+from openai import OpenAI
+from .prompt import get_prompt
 
 # Load environment variables from .env
 load_dotenv()
@@ -12,15 +13,17 @@ api_key = os.getenv("OPENAI_API_KEY")
 print(f"API Key loaded: {'Yes' if api_key else 'No'}")
 print(f"API Key length: {len(api_key) if api_key else 0}")
 
-# Set the API key
-openai.api_key = api_key
+# Create the OpenAI client
+client = OpenAI(api_key=api_key)
 
-# Example call
+# Example call with web search preview enabled
 try:
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": "Say hello!"}]
+    response = client.responses.create(
+        model="gpt-5-nano",
+        reasoning={"effort": "medium"},
+        tools=[{"type": "web_search"}],
+        input=get_prompt()
     )
-    print(response.choices[0].message.content)
+    print(response.output_text)
 except Exception as e:
     print(f"Error: {e}")
