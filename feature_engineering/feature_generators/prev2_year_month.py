@@ -1,5 +1,5 @@
 from .feature_gen import FeatureGen
-from typing import override
+import pandas as pd
 
 
 class Prev2YearMonth(FeatureGen):
@@ -17,9 +17,8 @@ class Prev2YearMonth(FeatureGen):
             field_name_mapping (Dict[str, str], optional): Dictionary mapping field names.
             data: pandas DataFrame containing the data to process
         """
-        super().__init__(field_name_mapping, data)
+        super().__init__(field_name_mapping, data, "Prev2YearMonth")
     
-    @override
     def generate_features(self, data, feature_set=None):
         """
         Generate previous two year month features from input data.
@@ -29,8 +28,8 @@ class Prev2YearMonth(FeatureGen):
             feature_set (pandas.DataFrame, optional): DataFrame representing the feature set being constructed
             
         Returns:
-            Processed data with previous two year month features added
+            pandas.DataFrame: Feature set with previous two year month features added
         """
-        # TODO: Implement previous two year month feature generation
-        # This is a stub implementation
-        return data
+        # Use the super class method to generate lag features average
+        # Generate all days from the same month two years ago (approximately 730-762 days ago)
+        return self.generate_lag_features_avg(data, feature_set, [pd.Timedelta(days=i) for i in range(700, 730)])

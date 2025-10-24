@@ -1,5 +1,5 @@
 from .feature_gen import FeatureGen
-from typing import override
+import pandas as pd
 
 
 class IsHoliday(FeatureGen):
@@ -17,9 +17,8 @@ class IsHoliday(FeatureGen):
             field_name_mapping (Dict[str, str], optional): Dictionary mapping field names.
             data: pandas DataFrame containing the data to process
         """
-        super().__init__(field_name_mapping, data)
+        super().__init__(field_name_mapping, data, "IsHoliday")
     
-    @override
     def generate_features(self, data, feature_set=None):
         """
         Generate holiday features from input data.

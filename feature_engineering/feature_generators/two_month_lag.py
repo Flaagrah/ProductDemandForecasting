@@ -1,5 +1,5 @@
 from .feature_gen import FeatureGen
-from typing import override
+import pandas as pd
 
 
 class TwoMonthLag(FeatureGen):
@@ -17,9 +17,8 @@ class TwoMonthLag(FeatureGen):
             field_name_mapping (Dict[str, str], optional): Dictionary mapping field names.
             data: pandas DataFrame containing the data to process
         """
-        super().__init__(field_name_mapping, data)
+        super().__init__(field_name_mapping, data, "TwoMonthLag")
     
-    @override
     def generate_features(self, data, feature_set=None):
         """
         Generate two month lag features from input data.
@@ -29,8 +28,7 @@ class TwoMonthLag(FeatureGen):
             feature_set (pandas.DataFrame, optional): DataFrame representing the feature set being constructed
             
         Returns:
-            Processed data with two month lag features added
+            pandas.DataFrame: Feature set with two month lag features added
         """
-        # TODO: Implement two month lag feature generation
-        # This is a stub implementation
-        return data
+        # Use the super class method to generate lag features average
+        return self.generate_lag_features_avg(data, feature_set, [pd.Timedelta(days=i) for i in range(1, 61)])

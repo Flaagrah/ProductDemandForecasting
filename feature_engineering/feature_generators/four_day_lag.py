@@ -17,9 +17,8 @@ class FourDayLag(FeatureGen):
             field_name_mapping (Dict[str, str], optional): Dictionary mapping field names.
             data: pandas DataFrame containing the data to process
         """
-        super().__init__(field_name_mapping, data)
+        super().__init__(field_name_mapping, data, "FourDayLag")
     
-    @override
     def generate_features(self, data, feature_set=None):
         """
         Generate four day lag features from input data.
@@ -29,8 +28,7 @@ class FourDayLag(FeatureGen):
             feature_set (pandas.DataFrame, optional): DataFrame representing the feature set being constructed
             
         Returns:
-            Processed data with four day lag features added
+            pandas.DataFrame: Feature set with four day lag features added
         """
-        # TODO: Implement four day lag feature generation
-        # This is a stub implementation
-        return data
+        # Use the super class method to generate lag features average
+        return self.generate_lag_features_avg(data, feature_set, [pd.Timedelta(days=i) for i in range(1, 5)])

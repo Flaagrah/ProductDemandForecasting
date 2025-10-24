@@ -17,7 +17,7 @@ class OneDayLag(FeatureGen):
             field_name_mapping (Dict[str, str], optional): Dictionary mapping field names.
             data: pandas DataFrame containing the data to process
         """
-        super().__init__(field_name_mapping, data)
+        super().__init__(field_name_mapping, data, "OneDayLag")
     
     def generate_features(self, data, feature_set=None):
         """

@@ -1,5 +1,5 @@
 from .feature_gen import FeatureGen
-from typing import override
+import pandas as pd
 
 
 class PrevYearWeek(FeatureGen):
@@ -17,9 +17,8 @@ class PrevYearWeek(FeatureGen):
             field_name_mapping (Dict[str, str], optional): Dictionary mapping field names.
             data: pandas DataFrame containing the data to process
         """
-        super().__init__(field_name_mapping, data)
+        super().__init__(field_name_mapping, data, "PrevYearWeek")
     
-    @override
     def generate_features(self, data, feature_set=None):
         """
         Generate previous year week features from input data.
@@ -29,8 +28,7 @@ class PrevYearWeek(FeatureGen):
             feature_set (pandas.DataFrame, optional): DataFrame representing the feature set being constructed
             
         Returns:
-            Processed data with previous year week features added
+            pandas.DataFrame: Feature set with previous year week features added
         """
-        # TODO: Implement previous year week feature generation
-        # This is a stub implementation
-        return data
+        # Use the super class method to generate lag features average
+        return self.generate_lag_features_avg(data, feature_set, [pd.Timedelta(days=i) for i in range(358, 365)])

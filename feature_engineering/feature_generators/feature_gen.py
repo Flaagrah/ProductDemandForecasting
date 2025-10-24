@@ -10,7 +10,7 @@ class FeatureGen(ABC):
     with a configurable string-to-string mapping dictionary.
     """
     
-    def __init__(self, field_name_mapping: Dict[str, str] = None, data=None):
+    def __init__(self, field_name_mapping: Dict[str, str] = None, data=None, feature_name: str = None):
         """
         Initialize the FeatureGen with a string-to-string mapping dictionary and data.
         
@@ -18,9 +18,11 @@ class FeatureGen(ABC):
             field_name_mapping (Dict[str, str], optional): Dictionary mapping strings to strings.
                                                Defaults to empty dictionary if None.
             data: pandas DataFrame containing the data to process
+            feature_name (str, optional): Name of the feature being generated
         """
         self.field_name_mapping = field_name_mapping if field_name_mapping is not None else {}
         self.data = data
+        self.feature_name = feature_name
     
     def get_field_name(self, field_key: str) -> str:
         """
@@ -101,7 +103,8 @@ class FeatureGen(ABC):
     
     def generate_lag_features_avg(self, data, feature_set=None, timedeltas=None):
         """
-        Generate lag features by summing sales across multiple time periods.
+        Generate lag features by averaging sales across multiple time periods.
+        Optimized version using vectorized operations.
         
         Args:
             data: Input data containing sales information
@@ -109,9 +112,10 @@ class FeatureGen(ABC):
             timedeltas (list): List of timedelta objects representing the lag periods
             
         Returns:
-            pandas.DataFrame: Feature set with lag sum features added
+            pandas.DataFrame: Feature set with lag average features added
         """
         import pandas as pd
+        import numpy as np
         
         if feature_set is None:
             feature_set = pd.DataFrame()
@@ -125,52 +129,61 @@ class FeatureGen(ABC):
         date_field = self.get_field_name('date')
         sales_field = self.get_field_name('sales')
         
-        # Initialize the lag sum column
-        lag_sum_values = []
+        # Ensure date columns are datetime
+        data = data.copy()
+        data[date_field] = pd.to_datetime(data[date_field])
+        
+        if not feature_set.empty:
+            feature_set = feature_set.copy()
+            feature_set[date_field] = pd.to_datetime(feature_set[date_field])
+        
+        # Create a lookup dictionary for fast access
+        # Key: (store_id, item_id, date), Value: sales
+        lookup_dict = {}
+        for _, row in data.iterrows():
+            key = (row[store_field], row[item_field], row[date_field])
+            lookup_dict[key] = row[sales_field]
+        
+        # Initialize the lag average column
+        lag_avg_values = []
         
         # Process each row in the feature set
         for idx, row in feature_set.iterrows():
-            # Get the current row's store, item, and date
             current_store = row[store_field]
             current_item = row[item_field]
-            current_date = pd.to_datetime(row[date_field])
+            current_date = row[date_field]
             
-            # Filter data to get records for this product and store combination
-            filtered_data = self.filter_data({
-                store_field: current_store,
-                item_field: current_item
-            })
-            
-            # Calculate sum of sales for all lag periods
-            lag_avg = 0
-            if not filtered_data.empty:
-                # Convert date column to datetime for comparison
-                filtered_data[date_field] = pd.to_datetime(filtered_data[date_field])
+            # Calculate average sales for all lag periods
+            lag_sales = []
+            for timedelta in timedeltas:
+                lag_date = current_date - timedelta
+                key = (current_store, current_item, lag_date)
                 
-                for timedelta in timedeltas:
-                    # Calculate the lag date
-                    lag_date = current_date - timedelta
-                    
-                    # Find the sales figure for this lag date
-                    lag_record = filtered_data[filtered_data[date_field] == lag_date]
-                    
-                    if not lag_record.empty and lag_record[sales_field].iloc[0] is not None:
-                        lag_avg += lag_record[sales_field].iloc[0] / len(timedeltas)
+                if key in lookup_dict and lookup_dict[key] is not None:
+                    lag_sales.append(lookup_dict[key])
             
-            # If no lag data found, use None instead of 0
-            lag_avg = lag_avg if lag_avg > 0 else None
-            lag_sum_values.append(lag_avg)
+            # Calculate average if we have any sales data
+            if lag_sales:
+                lag_avg = np.mean(lag_sales)
+            else:
+                lag_avg = None
+            
+            lag_avg_values.append(lag_avg)
         
-        # Create column name based on timedeltas
-        if len(timedeltas) == 1:
-            days = timedeltas[0].days
-            column_name = f'{days}_day_lag_sum'
+        # Create column name based on feature name
+        if self.feature_name:
+            column_name = self.feature_name.lower()
         else:
-            day_list = [str(td.days) for td in timedeltas]
-            column_name = f'lag_sum_{"_".join(day_list)}_days'
+            # Fallback to timedelta-based naming if no feature name provided
+            if len(timedeltas) == 1:
+                days = timedeltas[0].days
+                column_name = f'{days}_day_lag_sum'
+            else:
+                day_list = [str(td.days) for td in timedeltas]
+                column_name = f'lag_sum_{"_".join(day_list)}_days'
         
-        # Add the lag sum column to the feature set
-        feature_set[column_name] = lag_sum_values
+        # Add the lag average column to the feature set
+        feature_set[column_name] = lag_avg_values
         
         return feature_set
     
